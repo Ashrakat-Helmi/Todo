@@ -1,8 +1,8 @@
 <?php
 
-$dsn = 'mysql:host=127.0.0.1;dbname=todo-database;charset=utf8mb4';
-$username = 'root';
-$password = '';
+$dsn = 'mysql:host=/cloudsql/ejada-internship-project:us-central1:todo-db;dbname=todo-database;charset=utf8mb4';
+$username = 'dbuser';
+$password = '123456789';
 
 
 try {
