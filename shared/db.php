@@ -1,7 +1,9 @@
 <?php
-$dsn = 'mysql:host=localhost;dbname=todo_app;charset=utf8mb4';
-$username = 'root';
-$password = '';
+
+$dsn = 'mysql:host=/cloudsql/ejada-internship-project:us-central1:todo-db;dbname=todo-database;charset=utf8mb4';
+$username = 'dbuser';
+$password = '123456789';
+
 
 try {
     $pdo = new PDO($dsn, $username, $password);
