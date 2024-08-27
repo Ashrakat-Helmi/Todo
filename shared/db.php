@@ -1,5 +1,5 @@
 <?php
-$dsn = 'mysql:unix_socket=/cloudsql/ejada-internship-project:us-central1:todo-db;dbname=todo-database;charset=utf8mb4';
+$dsn = 'mysql:host=/cloudsql/ejada-internship-project:us-central1:todo-db;dbname=todo-database;charset=utf8mb4';
 $username = 'dbuser';
 $password = '12345678';
 
