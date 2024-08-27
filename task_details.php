@@ -1,7 +1,16 @@
 <?php
 session_start();
+require './vendor/autoload.php'; // For Google Cloud Storage
 include './shared/header.php';
 include './shared/db.php';
+putenv('GOOGLE_APPLICATION_CREDENTIALS=./ejada-internship-project-ab9d527aff10.json');
+use Google\Cloud\Storage\StorageClient;
+$storage = new StorageClient([
+    'keyFilePath' => './ejada-internship-project-ab9d527aff10.json'
+]);
+$bucketName = 'todo-attachments-bucket';
+$bucket = $storage->bucket($bucketName);
+
 
 // Get the task ID from the URL parameter
 $task_id = isset($_GET['task_id']) ? intval($_GET['task_id']) : 0;
@@ -97,14 +106,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_attachment'])) {
         $file_name = $_FILES['attachment']['name'];
         $file_tmp_name = $_FILES['attachment']['tmp_name'];
-        $file_path = '/uploads/' . $file_name;
+        $file_path = 'uploads/' . $file_name;
 
         // Move the file to the uploads directory
         move_uploaded_file($file_tmp_name, $file_path);
 
+        // Upload file to Google Cloud Storage
+        $object = $bucket->upload(
+            fopen($file_tmp_name, 'r'),
+            [
+                'name' => $file_name
+            ]
+        );
+
+        // Get the public URL of the uploaded file
+        $publicUrl = sprintf(
+            'https://storage.googleapis.com/%s/%s',
+            $bucketName,
+            $file_name
+        );
+
+
+        
         try {
             $stmt = $pdo->prepare('INSERT INTO attachments (task_id, file_name, file_path) VALUES (:task_id, :file_name, :file_path)');
-            $stmt->execute(['task_id' => $task_id, 'file_name' => $file_name, 'file_path' => $file_path]);
+            $stmt->execute(['task_id' => $task_id, 'file_name' => $file_name, 'file_path' => $publicUrl]);
             header("Location: task_details.php?task_id=$task_id");
             exit;
         } catch (PDOException $e) {
@@ -116,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attachment_id = intval($_POST['attachment_id']);
         $file_name = $_FILES['attachment']['name'];
         $file_tmp_name = $_FILES['attachment']['tmp_name'];
-        $file_path = '/uploads/' . $file_name;
+        $file_path =  'uploads/' . $file_name;
 
         // Move the file to the uploads directory
         move_uploaded_file($file_tmp_name, $file_path);
@@ -133,8 +159,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['delete_attachment'])) {
         $attachment_id = intval($_POST['attachment_id']);
-
+        $sql = "SELECT file_name FROM attachments WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':id', $attachment_id);
+        $stmt->execute();
+        $attachment = $stmt->fetch(PDO::FETCH_ASSOC);
         try {
+            // Delete the file from Google Cloud Storage
+            $object = $bucket->object($attachment['file_name']);
+            $object->delete();
+
             $stmt = $pdo->prepare('DELETE FROM attachments WHERE id = :attachment_id');
             $stmt->execute(['attachment_id' => $attachment_id]);
             header("Location: task_details.php?task_id=$task_id");
